@@ -603,6 +603,13 @@ def management(server_address, server_port):
 
             change_utc_offset(server_address, server_port, new_utc_offset)
 
+        # If changing grace period
+        elif preference_to_change == 5:
+            print("Changing grace period.")
+            new_grace_period = get_input("Please input new grace period: ", "int", 0)
+
+            change_grace_period(server_address, server_port, new_grace_period)
+
 
 def load_user_preferences(server_address, server_port):
     """
@@ -659,6 +666,7 @@ def display_user_preferences(user_preferences):
     else:
         utc_prefix = ""
     print("4.\tUTC offset:\t" + utc_prefix + str(user_preferences["utc_offset"]))
+    print("5.\tGrace period:\t" + str(user_preferences["grace_period"]))
 
 
 def change_active_state(server_address, server_port, current_active_state):
@@ -839,6 +847,28 @@ def change_utc_offset(server_address, server_port, new_utc_offset):
 
     # Request changing alarm state
     command = "set_utc_offset " + str(new_utc_offset)
+    connection.send(bytes(command, "utf-8"))
+
+    # Close connection
+    connection.close()
+
+
+def change_grace_period(server_address, server_port, new_grace_period):
+    """
+    Sends a command to the server requesting the grace period to be changed to the new_grace_period parameter.
+    :param server_address: The IP address of the server.
+    :type server_address: str
+    :param server_port: The port number of the server.
+    :type server_port: str
+    :param new_grace_period: The new grace period in minutes.
+    :type new_grace_period: int
+    :return: None
+    """
+    # Connect to the server
+    connection = server_connection(server_address, server_port)
+
+    # Request changing grace period
+    command = "set_grace_period " + str(new_grace_period)
     connection.send(bytes(command, "utf-8"))
 
     # Close connection
