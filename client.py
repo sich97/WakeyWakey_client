@@ -20,7 +20,6 @@ SETTINGS_PATH = "settings.ini"
 MIN_LINE_LENGTH = 5
 LINE_THICKNESS = 8
 BORDER_MARGIN = 10
-WINDOW_TITLE_MARGIN = 33
 
 
 def main():
@@ -31,13 +30,14 @@ def main():
     :return: None
     """
     # Initialization
-    server_address, server_port, window_height, window_width, alarm_state = initialize()
+    server_address, server_port, window_height, window_width, window_title_margin,\
+        mouse_y_offset, mouse_x_offset, alarm_state = initialize()
 
     # If the alarm is on
     if alarm_state == 1:
 
         # Test if the user is awake
-        awake_test(window_height, window_width)
+        awake_test(window_height, window_width, window_title_margin, mouse_y_offset, mouse_x_offset)
 
         # After having completed the awoke_test properly, stop the alarm
         set_alarm_state(server_address, server_port, 0)
@@ -66,18 +66,21 @@ def initialize():
     :return: server_address (str), server_port(int), window_height (int), window_width (int), alarm_state (int)
     """
     # Load settings from settings.ini
-    server_address, server_port, window_height, window_width = load_settings()
+    server_address, server_port, window_height, window_width, windows_title_margin,\
+        mouse_y_offset, mouse_x_offset = load_settings()
 
     # Get server state
     alarm_state = get_alarm_state(server_address, server_port)
 
-    return server_address, server_port, window_height, window_width, alarm_state
+    return server_address, server_port, window_height, window_width, windows_title_margin,\
+        mouse_y_offset, mouse_x_offset, alarm_state
 
 
 def load_settings():
     """
     Loads settings.ini and returns its information.
-    :return: server_address (str), server_port (str), window_height (int), window_width (int)
+    :return: server_address (str), server_port (str), window_height (int), window_width (int),
+    window_title_margin (int), mouse_y_offset (int), mouse_x_offset (int)
     """
     # Load settings.ini
     config = configparser.ConfigParser()
@@ -87,8 +90,11 @@ def load_settings():
     server_port = config['SERVER']['Port']
     window_height = int(config['CLIENT']['Window height'])
     window_width = int(config['CLIENT']['Window width'])
+    window_title_margin = int(config['CLIENT']['Window title margin'])
+    mouse_y_offset = int(config['CLIENT']['Mouse y offset'])
+    mouse_x_offset = int(config['CLIENT']['Mouse x offset'])
 
-    return server_address, server_port, window_height, window_width
+    return server_address, server_port, window_height, window_width, window_title_margin, mouse_y_offset, mouse_x_offset
 
 
 """
@@ -98,7 +104,7 @@ def load_settings():
 """
 
 
-def awake_test(window_height, window_width):
+def awake_test(window_height, window_width, window_title_margin, mouse_y_offset, mouse_x_offset):
     """
     Gives the user challenges until one is overcome, in which case we assume the user is awake enough to not fall back
     to sleep.
@@ -106,6 +112,12 @@ def awake_test(window_height, window_width):
     :type window_height: int
     :param window_width: How many pixels wide the GUI should be.
     :type window_width: int
+    :param window_title_margin: How many pixel thick the window title border is in the y direction.
+    :type window_title_margin: int
+    :param mouse_y_offset: How many pixels to offset the location of the mouse in the y direction.
+    :type mouse_y_offset: int
+    :param mouse_x_offset: How many pixels to offset the location of the mouse in the x direction.
+    :type mouse_x_offset: int
     :return: None
     """
     # Create GUI
@@ -117,7 +129,7 @@ def awake_test(window_height, window_width):
     # Run tests
     awake = tkinter.BooleanVar(canvas, False, "awake")
     while not awake.get():
-        awake.set(run_test(canvas, start))
+        awake.set(run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset))
 
     print("Congratulations. You passed the test!")
 
@@ -394,13 +406,19 @@ def increase_line_thickness(canvas, east_lines, west_lines, south_lines, north_l
     return new_east_lines, new_west_lines, new_south_lines, new_north_lines
 
 
-def run_test(canvas, start):
+def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset):
     """
     Runs the awake test.
     :param canvas: The GUI in which the test is drawn onto.
     :type canvas: tkinter.Canvas
     :param start: The coordinates of the start position of the challenge.
     :type start: np.array
+    :param window_title_margin: How many pixel thick the window title border is in the y direction.
+    :type window_title_margin: int
+    :param mouse_y_offset: How many pixels to offset the location of the mouse in the y direction.
+    :type mouse_y_offset: int
+    :param mouse_x_offset: How many pixels to offset the location of the mouse in the x direction.
+    :type mouse_x_offset: int
     :return: success (boolean)
     """
     # Place mouse pointer over start_block
@@ -414,7 +432,8 @@ def run_test(canvas, start):
 
         # Check mouse position
         mouse_x, mouse_y = pyautogui.position()
-        mouse_y -= WINDOW_TITLE_MARGIN
+        mouse_x += mouse_x_offset
+        mouse_y += mouse_y_offset
 
         # Check pixel color of mouse position
         current_pixel_color = get_pixel_color(canvas, mouse_x, mouse_y)
@@ -422,7 +441,7 @@ def run_test(canvas, start):
         if current_pixel_color == "WHITE":
             # Touching wall
             print("You have touched the wall! Moving you back to start.")
-            pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + WINDOW_TITLE_MARGIN + LINE_THICKNESS // 2)
+            pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + window_title_margin + LINE_THICKNESS // 2)
             time.sleep(0.1)
 
         # Check if in goal
