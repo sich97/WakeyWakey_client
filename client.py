@@ -31,7 +31,11 @@ def main():
     """
     # Initialization
     server_address, server_port, window_height, window_width, window_title_margin,\
-        mouse_y_offset, mouse_x_offset, alarm_state = initialize()
+        mouse_y_offset, mouse_x_offset, mock_test, alarm_state = initialize()
+
+    # If user wants a mock test
+    if mock_test.lower() in ["true", "1", "yes"]:
+        alarm_state = 1
 
     # If the alarm is on
     if alarm_state == 1:
@@ -63,24 +67,25 @@ def main():
 def initialize():
     """
     Loads settings from settings.ini and gets the current state of the alarm.
-    :return: server_address (str), server_port(int), window_height (int), window_width (int), alarm_state (int)
+    :return: server_address (str), server_port(int), window_height (int), window_width (int), window_title_margin (int),
+    mouse_y_offset (int), mouse_x_offset (int), mock_test (str), alarm_state (int)
     """
     # Load settings from settings.ini
     server_address, server_port, window_height, window_width, windows_title_margin,\
-        mouse_y_offset, mouse_x_offset = load_settings()
+        mouse_y_offset, mouse_x_offset, mock_test = load_settings()
 
     # Get server state
     alarm_state = get_alarm_state(server_address, server_port)
 
     return server_address, server_port, window_height, window_width, windows_title_margin,\
-        mouse_y_offset, mouse_x_offset, alarm_state
+        mouse_y_offset, mouse_x_offset, mock_test, alarm_state
 
 
 def load_settings():
     """
     Loads settings.ini and returns its information.
     :return: server_address (str), server_port (str), window_height (int), window_width (int),
-    window_title_margin (int), mouse_y_offset (int), mouse_x_offset (int)
+    window_title_margin (int), mouse_y_offset (int), mouse_x_offset (int), mock_test (str)
     """
     # Load settings.ini
     config = configparser.ConfigParser()
@@ -93,8 +98,10 @@ def load_settings():
     window_title_margin = int(config['CLIENT']['Window title margin'])
     mouse_y_offset = int(config['CLIENT']['Mouse y offset'])
     mouse_x_offset = int(config['CLIENT']['Mouse x offset'])
+    mock_test = config['CLIENT']['Mock test']
 
-    return server_address, server_port, window_height, window_width, window_title_margin, mouse_y_offset, mouse_x_offset
+    return server_address, server_port, window_height, window_width, window_title_margin,\
+        mouse_y_offset, mouse_x_offset, mock_test
 
 
 """
