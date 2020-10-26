@@ -568,6 +568,10 @@ def management(server_address, server_port):
         else:
             os.system("clear")
 
+        # Display the time of the chosen timezone - so as to give the user the ability to set the correct one
+        timezone_time = get_timezone_time(server_address, server_port)
+        display_timezone_time(timezone_time)
+
         # Display current preferences
         user_preferences = load_user_preferences(server_address, server_port)
         display_user_preferences(user_preferences)
@@ -609,6 +613,68 @@ def management(server_address, server_port):
             new_grace_period = get_input("Please input new grace period: ", "int", 0)
 
             change_grace_period(server_address, server_port, new_grace_period)
+
+
+def get_timezone_time(server_address, server_port):
+    """
+    Gets the time of the timezone set on the server.
+    :param server_address: The IP address of the server.
+    :type server_address: str
+    :param server_port: The port number of the server.
+    :type server_port: str
+    :return: timezone_time (list)
+    """
+    # Connect to server
+    connection = server_connection(server_address, server_port)
+
+    # Request user preferences
+    command = "get_timezone_time"
+    connection.send(bytes(command, "utf-8"))
+
+    # Receive and decode response
+    msg = connection.recv(1024)
+    timezone_time = msg.decode("utf-8")
+
+    # Close connection
+    connection.close()
+
+    return timezone_time
+
+
+def display_timezone_time(timezone_time):
+    """
+    Prints the current time of the chosen timezone in a readable format.
+    :param timezone_time: The current time of the timezone set on the server, from the server.
+    :type timezone_time: str
+    :return: None
+    """
+    # Separates the string into hours, minutes and seconds
+    timezone_split = timezone_time.split(", ")
+    timezone_hours = timezone_split[0]
+    timezone_minutes = timezone_split[1]
+    timezone_seconds = timezone_split[2]
+
+    # Cleans the data and turns them into integers
+    timezone_hours = int(timezone_hours.split("[")[1])
+    timezone_minutes = int(timezone_minutes)
+    timezone_seconds = int(timezone_seconds.split("]")[0])
+
+    # Turns them back into strings as double digits with leading zeroes if necessary
+    if timezone_hours < 10:
+        timezone_hours = "0" + str(timezone_hours)
+    else:
+        timezone_hours = str(timezone_hours)
+    if timezone_minutes < 10:
+        timezone_minutes = "0" + str(timezone_minutes)
+    else:
+        timezone_minutes = str(timezone_minutes)
+    if timezone_seconds < 10:
+        timezone_seconds = "0" + str(timezone_seconds)
+    else:
+        timezone_seconds = str(timezone_seconds)
+
+    # Prints the result to screen
+    print(f"Current time in chosen timezone: {timezone_hours}:{timezone_minutes}:{timezone_seconds}")
 
 
 def load_user_preferences(server_address, server_port):
