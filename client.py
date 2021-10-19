@@ -13,7 +13,6 @@ import time
 import tkinter
 import random
 
-import numpy
 import numpy as np
 import pyautogui
 import sys
