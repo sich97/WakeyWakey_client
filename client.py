@@ -19,10 +19,7 @@ import sys
 
 SETTINGS_PATH = "settings.ini"
 MIN_LINE_LENGTH = 5
-LINE_THICKNESS = 8
 BORDER_MARGIN = 10
-
-PRECISION_MOUSE_THRESHOLD = 7
 
 
 def main():
@@ -34,7 +31,7 @@ def main():
     """
     # Initialization
     server_address, server_port, window_height, window_width, window_x_margin, window_y_margin,\
-        mouse_y_offset, mouse_x_offset, mock_test, alarm_state = initialize()
+        mouse_y_offset, mouse_x_offset, mock_test, alarm_state, line_thickness, precision_mouse_threshold = initialize()
 
     # If user wants a mock test
     if mock_test.lower() in ["true", "1", "yes"]:
@@ -44,7 +41,8 @@ def main():
     if alarm_state == 1:
 
         # Test if the user is awake
-        awake_test(window_height, window_width, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset)
+        awake_test(window_height, window_width, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset,
+                   line_thickness, precision_mouse_threshold)
 
         # After having completed the awoke_test properly, stop the alarm
         set_alarm_state(server_address, server_port, 0)
@@ -80,8 +78,14 @@ def initialize():
     # Get server state
     alarm_state = get_alarm_state(server_address, server_port)
 
+    # Get line thickness
+    line_thickness = get_line_thickness(server_address, server_port)
+
+    # Get precision mouse threshold
+    precision_mouse_threshold = get_precision_mouse_threshold(server_address, server_port)
+
     return server_address, server_port, window_height, window_width, window_x_margin, window_y_margin,\
-           mouse_y_offset, mouse_x_offset, mock_test, alarm_state
+        mouse_y_offset, mouse_x_offset, mock_test, alarm_state, line_thickness, precision_mouse_threshold
 
 
 def load_settings():
@@ -115,7 +119,8 @@ def load_settings():
 """
 
 
-def awake_test(window_height, window_width, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset):
+def awake_test(window_height, window_width, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset,
+               line_thickness, precision_mouse_threshold):
     """
     Gives the user challenges until one is overcome, in which case we assume the user is awake enough to not fall back
     to sleep.
@@ -131,18 +136,23 @@ def awake_test(window_height, window_width, window_x_margin, window_y_margin, mo
     :type mouse_y_offset: int
     :param mouse_x_offset: How many pixels to offset the location of the mouse in the x direction.
     :type mouse_x_offset: int
+    :param line_thickness: How many pixels wide the lines will be.
+    :type line_thickness: int
+    :param precision_mouse_threshold: The threshold for which the mouse movement will be recognized as cheating.
+    :type precision_mouse_threshold: int
     :return: None
     """
     # Create GUI
     window, canvas = create_awake_test_gui(window_height, window_width)
 
     # Create test
-    start, east_lines, west_lines, south_lines, north_lines = create_test(canvas)
+    start, east_lines, west_lines, south_lines, north_lines = create_test(canvas, line_thickness)
 
     # Run tests
     awake = tkinter.BooleanVar(canvas, False, "awake")
     while not awake.get():
-        awake.set(run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset))
+        awake.set(run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset,
+                           line_thickness, precision_mouse_threshold))
 
     print("Congratulations. You passed the test!")
 
@@ -178,11 +188,13 @@ def create_awake_test_gui(window_height, window_width):
     return window, canvas
 
 
-def create_test(canvas):
+def create_test(canvas, line_thickness):
     """
     Fills the canvas with a graphical test, and a success condition.
     :param canvas: The GUI in which the test is drawn onto.
     :type canvas: tkinter.Canvas
+    :param line_thickness: How many pixels wide the lines will be.
+    :type line_thickness: int
     :return: east_lines (list of tkinter.Canvas.create_rectangle), west_lines (list of tkinter.Canvas.create_rectangle),
     south_lines (list of tkinter.Canvas.create_rectangle), north_lines (list of tkinter.Canvas.create_rectangle)
     """
@@ -195,21 +207,21 @@ def create_test(canvas):
     if start_side == 1:
         # If starting side is left
         start = np.array([BORDER_MARGIN, random.randint(BORDER_MARGIN, size[1])])
-        canvas.create_rectangle(start[0], start[1], start[0] + LINE_THICKNESS * 2, start[1] + LINE_THICKNESS * 2,
+        canvas.create_rectangle(start[0], start[1], start[0] + line_thickness * 2, start[1] + line_thickness * 2,
                                 fill="green", outline="green")
 
         end = np.array([size[0], random.randint(BORDER_MARGIN, size[1])])
-        end_block = canvas.create_rectangle(end[0], end[1], end[0] - LINE_THICKNESS * 2, end[1] + LINE_THICKNESS * 2,
+        end_block = canvas.create_rectangle(end[0], end[1], end[0] - line_thickness * 2, end[1] + line_thickness * 2,
                                             fill="red", outline="red")
 
     else:
         # If starting side is top
         start = np.array([random.randint(BORDER_MARGIN, size[0]), BORDER_MARGIN])
-        canvas.create_rectangle(start[0], start[1], start[0] + LINE_THICKNESS * 2, start[1] + LINE_THICKNESS * 2,
+        canvas.create_rectangle(start[0], start[1], start[0] + line_thickness * 2, start[1] + line_thickness * 2,
                                 fill="green", outline="green")
 
         end = np.array([random.randint(BORDER_MARGIN, size[0]), size[1]])
-        end_block = canvas.create_rectangle(end[0], end[1], end[0] + LINE_THICKNESS * 2, end[1] - LINE_THICKNESS * 2,
+        end_block = canvas.create_rectangle(end[0], end[1], end[0] + line_thickness * 2, end[1] - line_thickness * 2,
                                             fill="red", outline="red")
 
     # Instantiate list for referencing lines by their direction
@@ -234,7 +246,7 @@ def create_test(canvas):
     # After the path is complete, increase the thickness of all the lines
     east_lines, west_lines, south_lines, north_lines = increase_line_thickness(canvas, east_lines, west_lines,
                                                                                south_lines, north_lines,
-                                                                               LINE_THICKNESS)
+                                                                               line_thickness)
 
     return start, east_lines, west_lines, south_lines, north_lines
 
@@ -419,7 +431,8 @@ def increase_line_thickness(canvas, east_lines, west_lines, south_lines, north_l
     return new_east_lines, new_west_lines, new_south_lines, new_north_lines
 
 
-def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset):
+def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset, line_thickness,
+             precision_mouse_threshold):
     """
     Runs the awake test.
     :param canvas: The GUI in which the test is drawn onto.
@@ -434,11 +447,15 @@ def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mo
     :type mouse_y_offset: int
     :param mouse_x_offset: How many pixels to offset the location of the mouse in the x direction.
     :type mouse_x_offset: int
+    :param line_thickness: How many pixels wide the lines will be.
+    :type line_thickness: int
+    :param precision_mouse_threshold: The threshold for which the mouse movement will be recognized as cheating.
+    :type precision_mouse_threshold: int
     :return: success (boolean)
     """
     # Place mouse pointer over start_block
-    pyautogui.moveTo(start[0] + window_x_margin + LINE_THICKNESS // 2,
-                     start[1] + window_y_margin + LINE_THICKNESS // 2)
+    pyautogui.moveTo(start[0] + window_x_margin + line_thickness // 2,
+                     start[1] + window_y_margin + line_thickness // 2)
 
     success = False
 
@@ -448,13 +465,13 @@ def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mo
     while not success:
         canvas.update()
 
-        previous_mouse_x, previous_mouse_y = handle_cheating(previous_mouse_x, previous_mouse_y)
+        previous_mouse_x, previous_mouse_y = handle_cheating(previous_mouse_x, previous_mouse_y,
+                                                             precision_mouse_threshold)
 
         # Find current mouse position
         mouse_x, mouse_y = pyautogui.position()
         mouse_x += mouse_x_offset
         mouse_y += mouse_y_offset
-
 
         # Check pixel color of mouse position
         current_pixel_color = get_pixel_color(canvas, mouse_x, mouse_y)
@@ -462,8 +479,8 @@ def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mo
         if current_pixel_color == "WHITE":
             # Touching wall
             print("You have touched the wall! Moving you back to start.")
-            pyautogui.moveTo(start[0] + window_x_margin + LINE_THICKNESS // 2,
-                             start[1] + window_y_margin + LINE_THICKNESS // 2)
+            pyautogui.moveTo(start[0] + window_x_margin + line_thickness // 2,
+                             start[1] + window_y_margin + line_thickness // 2)
             previous_mouse_x, previous_mouse_y = pyautogui.position()
             time.sleep(0.1)
 
@@ -480,7 +497,7 @@ def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mo
     return success
 
 
-def handle_cheating(previous_mouse_x, previous_mouse_y):
+def handle_cheating(previous_mouse_x, previous_mouse_y, precision_mouse_threshold):
     current_mouse_x, current_mouse_y = pyautogui.position()
 
     movement = [current_mouse_x - previous_mouse_x, current_mouse_y - previous_mouse_y]
@@ -489,12 +506,12 @@ def handle_cheating(previous_mouse_x, previous_mouse_y):
     new_previous_y = current_mouse_y
 
     if abs(movement[0]) > abs(movement[1]):
-        if abs(movement[0]) > PRECISION_MOUSE_THRESHOLD:
+        if abs(movement[0]) > precision_mouse_threshold:
             pyautogui.moveTo(previous_mouse_x + movement[0] * -1, current_mouse_y)
             new_previous_x = previous_mouse_x + movement[0] * -1
 
     else:
-        if abs(movement[1]) > PRECISION_MOUSE_THRESHOLD:
+        if abs(movement[1]) > precision_mouse_threshold:
             pyautogui.moveTo(current_mouse_x, previous_mouse_y + movement[1] * -1)
             new_previous_y = previous_mouse_y + movement[1] * -1
 
@@ -677,6 +694,18 @@ def management(server_address, server_port):
 
             change_grace_period(server_address, server_port, new_grace_period)
 
+        elif preference_to_change == 6:
+            print("Changing line thickness.")
+            new_line_thickness = get_input("Please input new line thickness: ", "int", 0)
+
+            change_line_thickness(server_address, server_port, new_line_thickness)
+
+        elif preference_to_change == 7:
+            print("Changing precision mouse threshold.")
+            new_precision_mouse_threshold = get_input("Please input new precision mouse threshold: ", "int", 0)
+
+            change_precision_mouse_threshold(server_address, server_port, new_precision_mouse_threshold)
+
 
 def get_timezone_time(server_address, server_port):
     """
@@ -796,6 +825,8 @@ def display_user_preferences(user_preferences):
         utc_prefix = ""
     print("4.\tUTC offset:\t" + utc_prefix + str(user_preferences["utc_offset"]))
     print("5.\tGrace period:\t" + str(user_preferences["grace_period"]) + " minutes")
+    print("6.\tLine thickness:\t" + str(user_preferences["line_thickness"]) + " pixels")
+    print("7.\tPrecision mouse threshold:\t" + str(user_preferences["precision_mouse_threshold"]) + " pixels")
 
 
 def change_active_state(server_address, server_port, current_active_state):
@@ -1002,6 +1033,101 @@ def change_grace_period(server_address, server_port, new_grace_period):
 
     # Close connection
     connection.close()
+
+
+def change_line_thickness(server_address, server_port, new_line_thickness):
+    """
+    Sends a command to the server requesting the line thickness to be changed to the new_line_thickness parameter.
+    :param server_address: The IP address of the server.
+    :type server_address: str
+    :param server_port: The port number of the server.
+    :type server_port: str
+    :param new_line_thickness: The new line thickness in amount of pixels.
+    :type new_line_thickness: int
+    :return: None
+    """
+    # Connect to the server
+    connection = server_connection(server_address, server_port)
+
+    # Request changing grace period
+    command = "set_line_thickness " + str(new_line_thickness)
+    connection.send(bytes(command, "utf-8"))
+
+    # Close connection
+    connection.close()
+
+
+def change_precision_mouse_threshold(server_address, server_port, new_precision_mouse_threshold):
+    """
+    Sends a command to the server requesting the precision mouse threshold to be changed to the
+    new_precision_mouse_threshold parameter.
+    :param server_address: The IP address of the server.
+    :type server_address: str
+    :param server_port: The port number of the server.
+    :type server_port: str
+    :param new_precision_mouse_threshold: The new precision mouse threshold in amount of pixels.
+    :type new_precision_mouse_threshold: int
+    :return: None
+    """
+    # Connect to the server
+    connection = server_connection(server_address, server_port)
+
+    # Request changing grace period
+    command = "set_line_thickness " + str(new_precision_mouse_threshold)
+    connection.send(bytes(command, "utf-8"))
+
+    # Close connection
+    connection.close()
+
+
+def get_line_thickness(server_address, server_port):
+    """
+    Returns the value of line_thickness, which is stored in the database on the server.
+    :param server_address: The IP address of the server.
+    :type server_address: str
+    :param server_port: The port number of the server.
+    :type server_port: str
+    """
+    connection = server_connection(server_address, server_port)
+
+    # Request alarm state
+    command = "get_line_thickness"
+    connection.send(bytes(command, "utf-8"))
+
+    # Receive and decode response
+    msg = connection.recv(1024)
+    msg_decoded = msg.decode("utf-8")
+    line_thickness = int(msg_decoded)
+
+    # Close connection
+    connection.close()
+
+    return line_thickness
+
+
+def get_precision_mouse_threshold(server_address, server_port):
+    """
+    Returns the value of precision_mouse_threshold, which is stored in the database on the server.
+    :param server_address: The IP address of the server.
+    :type server_address: str
+    :param server_port: The port number of the server.
+    :type server_port: str
+    """
+    connection = server_connection(server_address, server_port)
+
+    # Request alarm state
+    command = "get_precision_mouse_threshold"
+    connection.send(bytes(command, "utf-8"))
+
+    # Receive and decode response
+    msg = connection.recv(1024)
+    msg_decoded = msg.decode("utf-8")
+    precision_mouse_threshold = int(msg_decoded)
+
+    # Close connection
+    connection.close()
+
+    return precision_mouse_threshold
 
 
 if __name__ == '__main__':
