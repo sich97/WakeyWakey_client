@@ -34,7 +34,7 @@ def main():
     :return: None
     """
     # Initialization
-    server_address, server_port, window_height, window_width, window_title_margin,\
+    server_address, server_port, window_height, window_width, window_x_margin, window_y_margin,\
         mouse_y_offset, mouse_x_offset, mock_test, alarm_state = initialize()
 
     # If user wants a mock test
@@ -45,7 +45,7 @@ def main():
     if alarm_state == 1:
 
         # Test if the user is awake
-        awake_test(window_height, window_width, window_title_margin, mouse_y_offset, mouse_x_offset)
+        awake_test(window_height, window_width, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset)
 
         # After having completed the awoke_test properly, stop the alarm
         set_alarm_state(server_address, server_port, 0)
@@ -75,14 +75,14 @@ def initialize():
     mouse_y_offset (int), mouse_x_offset (int), mock_test (str), alarm_state (int)
     """
     # Load settings from settings.ini
-    server_address, server_port, window_height, window_width, windows_title_margin,\
+    server_address, server_port, window_height, window_width, window_x_margin, window_y_margin,\
         mouse_y_offset, mouse_x_offset, mock_test = load_settings()
 
     # Get server state
     alarm_state = get_alarm_state(server_address, server_port)
 
-    return server_address, server_port, window_height, window_width, windows_title_margin,\
-        mouse_y_offset, mouse_x_offset, mock_test, alarm_state
+    return server_address, server_port, window_height, window_width, window_x_margin, window_y_margin,\
+           mouse_y_offset, mouse_x_offset, mock_test, alarm_state
 
 
 def load_settings():
@@ -99,12 +99,13 @@ def load_settings():
     server_port = config['SERVER']['Port']
     window_height = int(config['CLIENT']['Window height'])
     window_width = int(config['CLIENT']['Window width'])
-    window_title_margin = int(config['CLIENT']['Window title margin'])
+    window_x_margin = int(config['CLIENT']['Window x margin'])
+    window_y_margin = int(config['CLIENT']['Window y margin'])
     mouse_y_offset = int(config['CLIENT']['Mouse y offset'])
     mouse_x_offset = int(config['CLIENT']['Mouse x offset'])
     mock_test = config['CLIENT']['Mock test']
 
-    return server_address, server_port, window_height, window_width, window_title_margin,\
+    return server_address, server_port, window_height, window_width, window_x_margin, window_y_margin,\
         mouse_y_offset, mouse_x_offset, mock_test
 
 
@@ -115,7 +116,7 @@ def load_settings():
 """
 
 
-def awake_test(window_height, window_width, window_title_margin, mouse_y_offset, mouse_x_offset):
+def awake_test(window_height, window_width, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset):
     """
     Gives the user challenges until one is overcome, in which case we assume the user is awake enough to not fall back
     to sleep.
@@ -123,8 +124,10 @@ def awake_test(window_height, window_width, window_title_margin, mouse_y_offset,
     :type window_height: int
     :param window_width: How many pixels wide the GUI should be.
     :type window_width: int
-    :param window_title_margin: How many pixel thick the window title border is in the y direction.
-    :type window_title_margin: int
+    :param window_x_margin: How many pixel thick the window border is in the x direction.
+    :type window_x_margin: int
+    :param window_y_margin: How many pixel thick the window border is in the y direction.
+    :type window_y_margin: int
     :param mouse_y_offset: How many pixels to offset the location of the mouse in the y direction.
     :type mouse_y_offset: int
     :param mouse_x_offset: How many pixels to offset the location of the mouse in the x direction.
@@ -140,7 +143,7 @@ def awake_test(window_height, window_width, window_title_margin, mouse_y_offset,
     # Run tests
     awake = tkinter.BooleanVar(canvas, False, "awake")
     while not awake.get():
-        awake.set(run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset))
+        awake.set(run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset))
 
     print("Congratulations. You passed the test!")
 
@@ -417,15 +420,17 @@ def increase_line_thickness(canvas, east_lines, west_lines, south_lines, north_l
     return new_east_lines, new_west_lines, new_south_lines, new_north_lines
 
 
-def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset):
+def run_test(canvas, start, window_x_margin, window_y_margin, mouse_y_offset, mouse_x_offset):
     """
     Runs the awake test.
     :param canvas: The GUI in which the test is drawn onto.
     :type canvas: tkinter.Canvas
     :param start: The coordinates of the start position of the challenge.
     :type start: np.array
-    :param window_title_margin: How many pixel thick the window title border is in the y direction.
-    :type window_title_margin: int
+    :param window_x_margin: How many pixel thick the window border is in the x direction.
+    :type window_x_margin: int
+    :param window_y_margin: How many pixel thick the window border is in the y direction.
+    :type window_y_margin: int
     :param mouse_y_offset: How many pixels to offset the location of the mouse in the y direction.
     :type mouse_y_offset: int
     :param mouse_x_offset: How many pixels to offset the location of the mouse in the x direction.
@@ -433,7 +438,8 @@ def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset)
     :return: success (boolean)
     """
     # Place mouse pointer over start_block
-    pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + window_title_margin + LINE_THICKNESS // 2)
+    pyautogui.moveTo(start[0] + window_x_margin + LINE_THICKNESS // 2,
+                     start[1] + window_y_margin + LINE_THICKNESS // 2)
 
     success = False
 
@@ -457,7 +463,8 @@ def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset)
         if current_pixel_color == "WHITE":
             # Touching wall
             print("You have touched the wall! Moving you back to start.")
-            pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + window_title_margin + LINE_THICKNESS // 2)
+            pyautogui.moveTo(start[0] + window_x_margin + LINE_THICKNESS // 2,
+                             start[1] + window_y_margin + LINE_THICKNESS // 2)
             previous_mouse_x, previous_mouse_y = pyautogui.position()
             time.sleep(0.1)
 
