@@ -826,7 +826,7 @@ def display_user_preferences(user_preferences):
     print("4.\tUTC offset:\t" + utc_prefix + str(user_preferences["utc_offset"]))
     print("5.\tGrace period:\t" + str(user_preferences["grace_period"]) + " minutes")
     print("6.\tLine thickness:\t" + str(user_preferences["line_thickness"]) + " pixels")
-    print("7.\tPrecision mouse threshold:\t" + str(user_preferences["precision_mouse_threshold"]) + " pixels")
+    print("7.\tPrecision thrs:\t" + str(user_preferences["precision_mouse_threshold"]) + " pixels")
 
 
 def change_active_state(server_address, server_port, current_active_state):
