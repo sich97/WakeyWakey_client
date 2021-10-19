@@ -789,7 +789,7 @@ def display_user_preferences(user_preferences):
     else:
         utc_prefix = ""
     print("4.\tUTC offset:\t" + utc_prefix + str(user_preferences["utc_offset"]))
-    print("5.\tGrace period:\t" + str(user_preferences["grace_period"]))
+    print("5.\tGrace period:\t" + str(user_preferences["grace_period"]) + " minutes")
 
 
 def change_active_state(server_address, server_port, current_active_state):
