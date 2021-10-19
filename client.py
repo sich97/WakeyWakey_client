@@ -12,6 +12,8 @@ import os
 import time
 import tkinter
 import random
+
+import numpy
 import numpy as np
 import pyautogui
 import sys
@@ -20,6 +22,8 @@ SETTINGS_PATH = "settings.ini"
 MIN_LINE_LENGTH = 5
 LINE_THICKNESS = 8
 BORDER_MARGIN = 10
+
+PRECISION_MOUSE_THRESHOLD = 7
 
 
 def main():
@@ -429,18 +433,23 @@ def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset)
     :return: success (boolean)
     """
     # Place mouse pointer over start_block
-    pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + 33 + LINE_THICKNESS // 2)
+    pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + window_title_margin + LINE_THICKNESS // 2)
 
     success = False
+
+    previous_mouse_x, previous_mouse_y = pyautogui.position()
 
     # While the mouse hasn't yet reached the goal
     while not success:
         canvas.update()
 
-        # Check mouse position
+        previous_mouse_x, previous_mouse_y = handle_cheating(previous_mouse_x, previous_mouse_y)
+
+        # Find current mouse position
         mouse_x, mouse_y = pyautogui.position()
         mouse_x += mouse_x_offset
         mouse_y += mouse_y_offset
+
 
         # Check pixel color of mouse position
         current_pixel_color = get_pixel_color(canvas, mouse_x, mouse_y)
@@ -449,6 +458,7 @@ def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset)
             # Touching wall
             print("You have touched the wall! Moving you back to start.")
             pyautogui.moveTo(start[0] + LINE_THICKNESS // 2, start[1] + window_title_margin + LINE_THICKNESS // 2)
+            previous_mouse_x, previous_mouse_y = pyautogui.position()
             time.sleep(0.1)
 
         # Check if in goal
@@ -462,6 +472,27 @@ def run_test(canvas, start, window_title_margin, mouse_y_offset, mouse_x_offset)
             time.sleep(0.1)
 
     return success
+
+
+def handle_cheating(previous_mouse_x, previous_mouse_y):
+    current_mouse_x, current_mouse_y = pyautogui.position()
+
+    movement = [current_mouse_x - previous_mouse_x, current_mouse_y - previous_mouse_y]
+
+    new_previous_x = current_mouse_x
+    new_previous_y = current_mouse_y
+
+    if abs(movement[0]) > abs(movement[1]):
+        if abs(movement[0]) > PRECISION_MOUSE_THRESHOLD:
+            pyautogui.moveTo(previous_mouse_x + movement[0] * -1, current_mouse_y)
+            new_previous_x = previous_mouse_x + movement[0] * -1
+
+    else:
+        if abs(movement[1]) > PRECISION_MOUSE_THRESHOLD:
+            pyautogui.moveTo(current_mouse_x, previous_mouse_y + movement[1] * -1)
+            new_previous_y = previous_mouse_y + movement[1] * -1
+
+    return new_previous_x, new_previous_y
 
 
 def get_pixel_color(canvas, x, y):
